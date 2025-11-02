@@ -17,7 +17,8 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const base = process.env.NEXT_PUBLIC_API_URL || '';
+  // Default to deployed API if env not set
+  const base = process.env.NEXT_PUBLIC_API_URL || 'https://capstone3-6ywq.onrender.com';
       const res = await axios.post(`${base}/api/auth/login`, { email, password });
       const { token, user } = res.data;
       if (token) {

@@ -9,7 +9,21 @@ const PORT = process.env.PORT || 5000;
 async function main() {
   const app = express();
 
-  app.use(cors());
+  // CORS for all routes + explicit preflight handling to avoid 405 on OPTIONS
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://capstone3-lemon.vercel.app'
+  ];
+  app.use(cors({
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  }));
+  app.options('*', cors({
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  }));
   app.use(express.json());
 
   // Connect DB

@@ -90,8 +90,8 @@ Next.js (Frontend + Backend API Routes) → MongoDB → TMDB API
 ---
 
 ## 🚀 Hosting
-- **Frontend + Backend:** [Vercel](https://vercel.com)
-- **Database:** [MongoDB Atlas](https://www.mongodb.com/atlas)
+- **Frontend + Backend:** [Vercel](https://capstone3-lemon.vercel.app/)
+- **Backend:** [Render](https://capstone3-6ywq.onrender.com)
 - **External API:** [TMDB API](https://www.themoviedb.org/documentation/api)
 
 ---

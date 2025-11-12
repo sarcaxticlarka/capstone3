@@ -1,4 +1,4 @@
- ---
+---
 
 ```markdown
 # 🎬 CineScope – Movie & Series Discovery Website

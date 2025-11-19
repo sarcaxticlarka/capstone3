@@ -11,17 +11,43 @@ async function main() {
 
    const allowedOrigins = [
     'http://localhost:3000',
-    'https://capstone3-lemon.vercel.app'
+    'https://capstone3-lemon.vercel.app',
+    'https://capstone3-lemon.vercel.app/', // with trailing slash
+    'https://*.vercel.app' // Allow all Vercel preview deployments
   ];
+  
   app.use(cors({
-    origin: allowedOrigins,
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin is in allowedOrigins or matches Vercel pattern
+      if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   }));
+  
+  // Handle preflight requests
   app.options('*', cors({
-    origin: allowedOrigins,
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
   }));
   app.use(express.json());
 

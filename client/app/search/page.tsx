@@ -4,10 +4,12 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useInView } from 'react-intersection-observer';
 import useSWR from 'swr';
-import Nav from '../../components/Nav';
+import SafeNav from '../../components/SafeNav';
 import Footer from '../../components/Footer';
 import MovieCard from '../../components/MovieCard';
 import MovieCardSkeleton from '../../components/MovieCardSkeleton';
+
+export const dynamic = 'force-dynamic';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -105,7 +107,7 @@ function SearchContent() {
 export default function SearchPage() {
   return (
     <div className="min-h-screen bg-black text-white">
-      <Nav />
+      <SafeNav />
       <Suspense fallback={
         <main className="pt-28 px-4 md:px-12">
           <h1 className="text-3xl md:text-4xl font-extrabold mb-6">Search</h1>

@@ -2,14 +2,16 @@ import HeroBanner from '../../components/HeroBanner';
 import HorizontalSection from '../../components/HorizontalSection';
 import ContinueWatching from '../../components/ContinueWatching';
 import DisclaimerModal from '../../components/DisclaimerModal';
-import Nav from '../../components/Nav';
+import SafeNav from '../../components/SafeNav';
 import Footer from '../../components/Footer';
+
+export const dynamic = 'force-dynamic';
 
 export default function LandingPage() {
   return (
     <div className="bg-black min-h-screen">
       <DisclaimerModal />
-      <Nav />
+      <SafeNav />
 
       {/* dynamic hero (trending) */}
       <HeroBanner />

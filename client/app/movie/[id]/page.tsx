@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import Nav from '../../../components/Nav';
+import SafeNav from '../../../components/SafeNav';
 import Footer from '../../../components/Footer';
+
+export const dynamic = 'force-dynamic';
 
 export default function MoviePage() {
   const params = useParams();
@@ -58,7 +60,7 @@ export default function MoviePage() {
 
   if (loading) return (
     <div className="min-h-screen bg-black">
-      <Nav />
+      <SafeNav />
       <div className="pt-24 px-6 text-white text-center">Loading...</div>
       <Footer />
     </div>
@@ -66,7 +68,7 @@ export default function MoviePage() {
   
   if (!movie || movie.status_code === 34) return (
     <div className="min-h-screen bg-black">
-      <Nav />
+      <SafeNav />
       <div className="pt-24 px-6 text-white text-center">Movie not found.</div>
       <Footer />
     </div>
@@ -128,7 +130,7 @@ export default function MoviePage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Nav />
+      <SafeNav />
       <div className="pt-24 px-6 md:px-12 pb-12">
         <div className="max-w-6xl mx-auto">
           {/* Backdrop Image */}

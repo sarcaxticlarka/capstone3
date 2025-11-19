@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Nav from '../../components/Nav';
+import SafeNav from '../../components/SafeNav';
 import Footer from '../../components/Footer';
+
+export const dynamic = 'force-dynamic';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -101,7 +103,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Nav />
+      <SafeNav />
 
       <main className="pt-28 px-4 md:px-12 pb-24">
         <div className="max-w-6xl mx-auto">

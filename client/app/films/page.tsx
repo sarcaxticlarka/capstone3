@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import { useInView } from 'react-intersection-observer';
-import Nav from '../../components/Nav';
+import SafeNav from '../../components/SafeNav';
 import Footer from '../../components/Footer';
 import MovieCard from '../../components/MovieCard';
 import MovieCardSkeleton from '../../components/MovieCardSkeleton';
+
+export const dynamic = 'force-dynamic';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -45,7 +47,7 @@ export default function FilmsPage() {
 
   return (
     <div className="bg-black min-h-screen">
-      <Nav />
+      <SafeNav />
       <div className="pt-24 px-6 md:px-12 pb-12">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-4xl font-bold text-white mb-2">Movies</h1>

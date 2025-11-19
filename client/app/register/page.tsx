@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { getApiUrl } from '../../lib/api';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -18,8 +19,7 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      // Use localhost for development
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = getApiUrl();
       const res = await axios.post(`${apiUrl}/api/auth/signup`, { name, email, password });
       const { token, user } = res.data;
       if (token) {

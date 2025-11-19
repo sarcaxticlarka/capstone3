@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import SafeNav from '../../components/SafeNav';
 import Footer from '../../components/Footer';
+import { getApiUrl } from '../../lib/api';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +30,7 @@ export default function ProfilePage() {
   async function fetchUserLists(token: string) {
     setLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = getApiUrl();
       const [fRes, wRes, hRes] = await Promise.all([
         fetch(`${apiUrl}/api/user/favorites`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${apiUrl}/api/user/watchlist`, { headers: { Authorization: `Bearer ${token}` } }),
@@ -52,7 +53,7 @@ export default function ProfilePage() {
     const token = localStorage.getItem('cinescope_token');
     if (!token) return;
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = getApiUrl();
       const res = await fetch(`${apiUrl}/api/user/favorites/${tmdbId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
@@ -67,7 +68,7 @@ export default function ProfilePage() {
     const token = localStorage.getItem('cinescope_token');
     if (!token) return;
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = getApiUrl();
       const res = await fetch(`${apiUrl}/api/user/watchlist/${tmdbId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
@@ -82,7 +83,7 @@ export default function ProfilePage() {
     const token = localStorage.getItem('cinescope_token');
     if (!token) return;
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = getApiUrl();
       const res = await fetch(`${apiUrl}/api/user/watch-history/${tmdbId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },

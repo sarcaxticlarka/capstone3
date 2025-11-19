@@ -34,6 +34,8 @@ async function main() {
   }
 
   app.use('/api/auth', authRoutes);
+  const userRoutes = require('./routes/user');
+  app.use('/api/user', userRoutes);
 
   app.get('/health', (req, res) => res.status(200).send('ok'));
 

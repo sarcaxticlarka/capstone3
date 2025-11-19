@@ -18,9 +18,9 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-  // Default to deployed API if env not set
-  const base = process.env.NEXT_PUBLIC_API_URL || 'https://capstone3-6ywq.onrender.com';
-      const res = await axios.post(`${base}/api/auth/signup`, { name, email, password });
+      // Use localhost for development
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const res = await axios.post(`${apiUrl}/api/auth/signup`, { name, email, password });
       const { token, user } = res.data;
       if (token) {
         localStorage.setItem('cinescope_token', token);

@@ -1,24 +1,77 @@
-import Hero from './hero';
+import HeroBanner from '../../components/HeroBanner';
+import HorizontalSection from '../../components/HorizontalSection';
+import ContinueWatching from '../../components/ContinueWatching';
+import DisclaimerModal from '../../components/DisclaimerModal';
 import Nav from '../../components/Nav';
 import Footer from '../../components/Footer';
 
 export default function LandingPage() {
   return (
     <div className="bg-black min-h-screen">
+      <DisclaimerModal />
       <Nav />
 
-      <Hero />
+      {/* dynamic hero (trending) */}
+      <HeroBanner />
 
-      {/* Coming soon section  */}
-      <section className="px-6 md:px-12 -mt-20 pb-24 relative z-30">
-        <div className="max-w-5xl mx-auto text-center bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-lg p-10">
-          <span className="inline-block px-4 py-2 bg-red-600/20 border border-red-600 rounded-full text-red-500 text-xs font-semibold tracking-wider mb-4">
-            Building Phase
-          </span>
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">CINESCOPE is in building phase</h2>
-          <p className="text-lg text-gray-400">Coming soon</p>
-        </div>
-      </section>
+      {/* Continue Watching - Shows only for logged-in users */}
+      <ContinueWatching />
+
+      {/* Trending Now - Horizontal Scroll */}
+      <HorizontalSection
+        title="Trending Now"
+        apiUrl="/api/tmdb/trending?type=all"
+        viewAllHref="/category?type=trending&name=Trending Now"
+      />
+
+      {/* Category Sections with Horizontal Scroll */}
+      <HorizontalSection
+        title="New Releases"
+        apiUrl="/api/tmdb/discover?type=movie&sort_by=primary_release_date.desc&vote_count.gte=100"
+        viewAllHref="/category?type=new-releases&name=New Releases"
+      />
+      
+      <HorizontalSection
+        title="Emotional & Drama"
+        apiUrl="/api/tmdb/discover?type=movie&genre=18&sort_by=vote_average.desc&vote_count.gte=500"
+        viewAllHref="/category?genre=18&name=Drama"
+      />
+
+      <HorizontalSection
+        title="Romantic"
+        apiUrl="/api/tmdb/discover?type=movie&genre=10749&sort_by=vote_average.desc&vote_count.gte=200"
+        viewAllHref="/category?genre=10749&name=Romance"
+      />
+
+      <HorizontalSection
+        title="Blockbusters"
+        apiUrl="/api/tmdb/discover?type=movie&sort_by=popularity.desc&vote_count.gte=1000"
+        viewAllHref="/category?type=blockbusters&name=Blockbusters"
+      />
+
+      <HorizontalSection
+        title="Hollywood Action"
+        apiUrl="/api/tmdb/discover?type=movie&genre=28&with_original_language=en&sort_by=popularity.desc&vote_count.gte=500"
+        viewAllHref="/category?genre=28&name=Action"
+      />
+
+      <HorizontalSection
+        title="Bollywood"
+        apiUrl="/api/tmdb/discover?type=movie&with_original_language=hi&sort_by=popularity.desc&vote_count.gte=100"
+        viewAllHref="/category?lang=hi&name=Bollywood"
+      />
+
+      <HorizontalSection
+        title="New Series"
+        apiUrl="/api/tmdb/discover?type=tv&sort_by=first_air_date.desc&vote_count.gte=50"
+        viewAllHref="/category?type=new-series&name=New Series"
+      />
+
+      <HorizontalSection
+        title="Popular TV Shows"
+        apiUrl="/api/tmdb/discover?type=tv&sort_by=popularity.desc&vote_count.gte=100"
+        viewAllHref="/TV-Shows"
+      />
 
       <Footer />
     </div>

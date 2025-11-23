@@ -31,6 +31,20 @@ router.get('/favorites', verifyToken, async (req, res) => {
   }
 });
 
+// GET /api/user/favorites/:tmdbId - check single favorite exists
+router.get('/favorites/:tmdbId', verifyToken, async (req, res) => {
+  try {
+    const tmdbId = parseInt(req.params.tmdbId, 10);
+    if (Number.isNaN(tmdbId)) return res.status(400).json({ message: 'Invalid tmdbId' });
+    const user = await User.findById(req.userId).select('favorites');
+    const exists = user ? user.favorites.some(f => f.tmdbId === tmdbId) : false;
+    return res.json({ tmdbId, exists });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // POST /api/user/favorites
 router.post('/favorites', verifyToken, async (req, res) => {
   try {

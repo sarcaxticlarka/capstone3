@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { getApiUrl } from '../../lib/api';
+import GoogleAuthButton from '../../components/GoogleAuthButton';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -53,14 +54,18 @@ export default function RegisterPage() {
           <div className="bg-black/75 backdrop-blur-sm rounded-lg p-10 md:p-14">
             <h1 className="text-3xl font-bold text-white mb-2">Sign Up</h1>
             <p className="text-gray-400 text-sm mb-8">Create your account to get started</p>
-            
+            <GoogleAuthButton />
+            <div className="flex items-center my-6">
+              <div className="flex-grow h-px bg-gray-700" />
+              <span className="mx-4 text-gray-400">or</span>
+              <div className="flex-grow h-px bg-gray-700" />
+            </div>
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && (
                 <div className="bg-orange-600/90 text-white text-sm p-3 rounded">
                   {error}
                 </div>
               )}
-
               <div className="space-y-4">
                 <input
                   type="text"
@@ -69,7 +74,6 @@ export default function RegisterPage() {
                   placeholder="Full Name"
                   className="w-full px-4 py-4 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
                 />
-
                 <input
                   type="email"
                   value={email}
@@ -78,7 +82,6 @@ export default function RegisterPage() {
                   placeholder="Email address"
                   className="w-full px-4 py-4 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
                 />
-
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}

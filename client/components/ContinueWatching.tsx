@@ -3,35 +3,34 @@
 import React, { useEffect, useState } from 'react';
 import MovieCard from './MovieCard';
 import MovieCardSkeleton from './MovieCardSkeleton';
+import { fetchWatchHistory } from '../lib/userLists';
+import { useToasts } from './ToastProvider';
 
 export default function ContinueWatching() {
   const [watchHistory, setWatchHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const { push } = useToasts();
+
   useEffect(() => {
-    async function fetchHistory() {
+    async function load() {
       const token = localStorage.getItem('cinescope_token');
       if (!token) {
         setLoading(false);
         return;
       }
-
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-        const res = await fetch(`${apiUrl}/api/user/watch-history`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        setWatchHistory(data.watchHistory || []);
+        const history = await fetchWatchHistory(token);
+        setWatchHistory(history);
       } catch (e) {
         console.error(e);
+        push('Failed to load watch history', 'error');
       } finally {
         setLoading(false);
       }
     }
-
-    fetchHistory();
-  }, []);
+    load();
+  }, [push]);
 
   // Don't show section if not logged in or no history
   if (!loading && watchHistory.length === 0) return null;
@@ -57,7 +56,7 @@ export default function ContinueWatching() {
                       title={item.title}
                       image={item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : undefined}
                       backdrop={item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : undefined}
-                      media_type={item.media_type || 'movie'}
+                      media_type={item.media_type || (item.title ? 'movie' : 'tv')}
                     />
                   </div>
                 ))}

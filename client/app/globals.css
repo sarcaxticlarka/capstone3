@@ -25,6 +25,24 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Cursor pointer for all buttons and links */
+button,
+a,
+[role="button"],
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Disable cursor pointer for disabled buttons */
+button:disabled,
+input:disabled,
+[disabled] {
+  cursor: not-allowed;
+}
+
 /* Hide scrollbar for horizontal scroll sections */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { getApiUrl } from '../../lib/api';
+import GoogleAuthButton from '../../components/GoogleAuthButton';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -57,14 +58,18 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           <div className="bg-black/75 backdrop-blur-sm rounded-lg p-10 md:p-14">
             <h1 className="text-3xl font-bold text-white mb-8">Sign In</h1>
-            
+            <GoogleAuthButton />
+            <div className="flex items-center my-6">
+              <div className="flex-grow h-px bg-gray-700" />
+              <span className="mx-4 text-gray-400">or</span>
+              <div className="flex-grow h-px bg-gray-700" />
+            </div>
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
                 <div className="bg-orange-600/90 text-white text-sm p-3 rounded">
                   {error}
                 </div>
               )}
-
               <div className="space-y-4">
                 <input
                   type="email"
@@ -74,7 +79,6 @@ export default function LoginPage() {
                   placeholder="Email or phone number"
                   className="w-full px-4 py-4 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
                 />
-
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}

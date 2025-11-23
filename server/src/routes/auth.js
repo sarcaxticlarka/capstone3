@@ -60,4 +60,55 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// POST /api/auth/google-login
+router.post('/google-login', async (req, res) => {
+  try {
+    const { email, name, googleId, image } = req.body;
+    if (!email || !googleId) {
+      return res.status(400).json({ message: 'Email and Google ID required' });
+    }
+
+    // Check if user already exists
+    let user = await User.findOne({ email });
+    
+    if (user) {
+      // Update existing user with Google info if not already set
+      if (!user.googleId) {
+        user.googleId = googleId;
+        user.provider = 'google';
+        if (image) user.image = image;
+        if (name) user.name = name;
+        await user.save();
+      }
+    } else {
+      // Create new user for Google login
+      user = new User({
+        name: name || 'Google User',
+        email,
+        googleId,
+        image,
+        provider: 'google',
+        password: 'google-oauth-no-password', // placeholder, won't be used
+      });
+      await user.save();
+    }
+
+    const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+
+    return res.json({ 
+      token, 
+      user: { 
+        id: user._id, 
+        email: user.email, 
+        name: user.name,
+        image: user.image,
+        provider: user.provider 
+      } 
+    });
+  } catch (err) {
+    console.error('Google login error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

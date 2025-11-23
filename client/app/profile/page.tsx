@@ -2,48 +2,83 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
 import SafeNav from '../../components/SafeNav';
 import Footer from '../../components/Footer';
 import { getApiUrl } from '../../lib/api';
+import { fetchFavorites, fetchWatchlist, fetchWatchHistory, removeFavorite, removeWatchlist, removeWatchHistory } from '../../lib/userLists';
+import { useToasts } from '../../components/ToastProvider';
 
 export const dynamic = 'force-dynamic';
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [user, setUser] = useState<any>(null);
   const [favorites, setFavorites] = useState<any[]>([]);
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [watchHistory, setWatchHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { push } = useToasts();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('cinescope_user');
-    const token = localStorage.getItem('cinescope_token');
-    if (!storedUser || !token) {
-      router.push('/login');
-    } else {
-      setUser(JSON.parse(storedUser));
-      fetchUserLists(token);
+    const handleTokenReady = () => {
+      const token = localStorage.getItem('cinescope_token');
+      if (token) {
+        fetchUserLists(token);
+      }
+    };
+    window.addEventListener('cinescope_token_ready', handleTokenReady);
+    
+    if (session && session.user) {
+      const googleUser = {
+        name: session.user.name || 'Google User',
+        email: session.user.email,
+        image: session.user.image,
+        provider: 'google',
+      };
+      setUser(googleUser);
+      localStorage.setItem('cinescope_user', JSON.stringify(googleUser));
+      
+      const backendToken = (session.user as any).backendToken || localStorage.getItem('cinescope_token');
+      
+      if (backendToken) {
+        localStorage.setItem('cinescope_token', backendToken);
+        fetchUserLists(backendToken);
+      } else {
+        setLoading(false);
+      }
+    } else if (status !== 'loading') {
+      const storedUser = localStorage.getItem('cinescope_user');
+      const token = localStorage.getItem('cinescope_token');
+      
+      if (!storedUser || !token) {
+        router.push('/login');
+      } else {
+        const parsedUser = JSON.parse(storedUser);
+        setUser({ ...parsedUser, provider: parsedUser.provider || 'email' });
+        fetchUserLists(token);
+      }
     }
-  }, [router]);
+    
+    return () => {
+      window.removeEventListener('cinescope_token_ready', handleTokenReady);
+    };
+  }, [session, status, router]);
 
   async function fetchUserLists(token: string) {
     setLoading(true);
     try {
-      const apiUrl = getApiUrl();
-      const [fRes, wRes, hRes] = await Promise.all([
-        fetch(`${apiUrl}/api/user/favorites`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${apiUrl}/api/user/watchlist`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${apiUrl}/api/user/watch-history`, { headers: { Authorization: `Bearer ${token}` } }),
+      const [favs, watch, history] = await Promise.all([
+        fetchFavorites(token),
+        fetchWatchlist(token),
+        fetchWatchHistory(token),
       ]);
-      const fjson = await fRes.json();
-      const wjson = await wRes.json();
-      const hjson = await hRes.json();
-      setFavorites(fjson.favorites || []);
-      setWatchlist(wjson.watchlist || []);
-      setWatchHistory(hjson.watchHistory || []);
-    } catch (e) {
-      console.error(e);
+      setFavorites(favs);
+      setWatchlist(watch);
+      setWatchHistory(history);
+    } catch (e: any) {
+      push('Failed to load lists: ' + (e.message || 'Unknown error'), 'error');
     } finally {
       setLoading(false);
     }
@@ -51,47 +86,50 @@ export default function ProfilePage() {
 
   async function removeFromFavorites(tmdbId: number) {
     const token = localStorage.getItem('cinescope_token');
-    if (!token) return;
+    if (!token) return router.push('/login');
+    const prev = favorites;
+    setFavorites(prev.filter((f) => f.tmdbId !== tmdbId));
     try {
-      const apiUrl = getApiUrl();
-      const res = await fetch(`${apiUrl}/api/user/favorites/${tmdbId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        setFavorites((prev) => prev.filter((f) => f.tmdbId !== tmdbId));
-      }
-    } catch (e) {}
+      await removeFavorite(token, tmdbId);
+      push('Removed favorite', 'success');
+    } catch (e) {
+      setFavorites(prev); // rollback
+      push('Failed to remove favorite', 'error');
+    }
   }
 
   async function removeFromWatchlist(tmdbId: number) {
     const token = localStorage.getItem('cinescope_token');
-    if (!token) return;
+    if (!token) return router.push('/login');
+    const prev = watchlist;
+    setWatchlist(prev.filter((f) => f.tmdbId !== tmdbId));
     try {
-      const apiUrl = getApiUrl();
-      const res = await fetch(`${apiUrl}/api/user/watchlist/${tmdbId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        setWatchlist((prev) => prev.filter((f) => f.tmdbId !== tmdbId));
-      }
-    } catch (e) {}
+      await removeWatchlist(token, tmdbId);
+      push('Removed from watchlist', 'success');
+    } catch (e) {
+      setWatchlist(prev);
+      push('Failed to remove watchlist item', 'error');
+    }
   }
 
   async function removeFromHistory(tmdbId: number) {
     const token = localStorage.getItem('cinescope_token');
-    if (!token) return;
+    if (!token) return router.push('/login');
+    const prev = watchHistory;
+    setWatchHistory(prev.filter((h) => h.tmdbId !== tmdbId));
     try {
-      const apiUrl = getApiUrl();
-      const res = await fetch(`${apiUrl}/api/user/watch-history/${tmdbId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        setWatchHistory((prev) => prev.filter((h) => h.tmdbId !== tmdbId));
-      }
-    } catch (e) {}
+      await removeWatchHistory(token, tmdbId);
+      push('Removed from history', 'success');
+    } catch (e) {
+      setWatchHistory(prev);
+      push('Failed to remove history item', 'error');
+    }
+  }
+
+  function handleEmailLogout() {
+    localStorage.removeItem('cinescope_token');
+    localStorage.removeItem('cinescope_user');
+    router.push('/login');
   }
 
   if (!user) {
@@ -111,6 +149,16 @@ export default function ProfilePage() {
           <h1 className="text-3xl md:text-4xl font-bold mb-8">Your Profile</h1>
 
           <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-xl p-8 space-y-6 mb-8">
+            {user.image && (
+              <div className="flex justify-center mb-4">
+                <img 
+                  src={user.image} 
+                  alt="Profile" 
+                  className="w-24 h-24 rounded-full border-4 border-gray-700 object-cover" 
+                />
+              </div>
+            )}
+            
             <div>
               <label className="text-xs uppercase text-gray-500 font-semibold">Name</label>
               <p className="text-xl text-white mt-1">{user.name || 'Not provided'}</p>
@@ -122,10 +170,41 @@ export default function ProfilePage() {
             </div>
 
             <div>
+              <label className="text-xs uppercase text-gray-500 font-semibold">Login Method</label>
+              <p className="text-xl text-white mt-1">
+                {user.provider === 'google' ? (
+                  <span className="flex items-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                      <g>
+                        <path fill="#4285F4" d="M24 9.5c3.54 0 6.7 1.22 9.19 3.23l6.85-6.85C35.64 2.69 30.13 0 24 0 14.82 0 6.73 5.82 2.69 14.09l7.98 6.19C12.13 13.41 17.56 9.5 24 9.5z"/>
+                        <path fill="#34A853" d="M46.1 24.55c0-1.64-.15-3.22-.42-4.74H24v9.01h12.42c-.54 2.91-2.18 5.38-4.65 7.04l7.19 5.59C43.98 37.13 46.1 31.36 46.1 24.55z"/>
+                        <path fill="#FBBC05" d="M10.67 28.28a14.5 14.5 0 0 1 0-8.56l-7.98-6.19A23.94 23.94 0 0 0 0 24c0 3.77.9 7.34 2.69 10.47l7.98-6.19z"/>
+                        <path fill="#EA4335" d="M24 48c6.13 0 11.64-2.02 15.84-5.5l-7.19-5.59c-2.01 1.35-4.59 2.15-8.65 2.15-6.44 0-11.87-3.91-13.33-9.28l-7.98 6.19C6.73 42.18 14.82 48 24 48z"/>
+                        <path fill="none" d="M0 0h48v48H0z"/>
+                      </g>
+                    </svg>
+                    Google
+                  </span>
+                ) : (
+                  'Email / Password'
+                )}
+              </p>
+            </div>
+
+            <div>
               <label className="text-xs uppercase text-gray-500 font-semibold">Member Since</label>
               <p className="text-xl text-white mt-1">
                 {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </p>
+            </div>
+
+            <div className="pt-4">
+              <button
+                onClick={() => user.provider === 'google' ? signOut({ callbackUrl: '/login' }) : handleEmailLogout()}
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded transition"
+              >
+                Log Out
+              </button>
             </div>
           </div>
 

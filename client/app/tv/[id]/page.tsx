@@ -4,6 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import SafeNav from '../../../components/SafeNav';
 import Footer from '../../../components/Footer';
+import { getApiUrl } from '../../../lib/api';
+import { addFavorite, removeFavorite, addWatchlist, removeWatchlist, favoriteExists } from '../../../lib/userLists';
+import { useToasts } from '../../../components/ToastProvider';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +19,7 @@ export default function TVPage() {
   const [inFavorites, setInFavorites] = useState(false);
   const [inWatchlist, setInWatchlist] = useState(false);
   const router = useRouter();
+  const { push } = useToasts();
 
   useEffect(() => {
     let mounted = true;
@@ -37,23 +41,35 @@ export default function TVPage() {
   }, [id]);
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('cinescope_token') : null;
-    if (!token) return;
     async function checkLists() {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('cinescope_token') : null;
+      if (!token) return;
+      
       try {
-        const [fRes, wRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/user/favorites`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/user/watchlist`, { headers: { Authorization: `Bearer ${token}` } }),
-        ]);
-        const fjson = await fRes.json();
+        const apiUrl = getApiUrl();
+        if (token) {
+          const favExists = await favoriteExists(token, Number(id));
+          setInFavorites(favExists);
+        }
+        const wRes = await fetch(`${apiUrl}/api/user/watchlist`, { headers: { Authorization: `Bearer ${token}` } });
         const wjson = await wRes.json();
-        const favs = fjson.favorites || [];
         const watch = wjson.watchlist || [];
-        setInFavorites(favs.some((f: any) => f.tmdbId === Number(id)));
         setInWatchlist(watch.some((f: any) => f.tmdbId === Number(id)));
-      } catch (e) {}
+      } catch (e) {
+        // silent
+      }
     }
+    
     checkLists();
+    
+    const handleTokenReady = () => {
+      checkLists();
+    };
+    window.addEventListener('cinescope_token_ready', handleTokenReady);
+    
+    return () => {
+      window.removeEventListener('cinescope_token_ready', handleTokenReady);
+    };
   }, [id]);
 
   if (loading) return (
@@ -72,54 +88,83 @@ export default function TVPage() {
     </div>
   );
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('cinescope_token') : null;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+  const apiUrl = getApiUrl();
 
   async function handleAddFavorite() {
-    if (!token) return router.push('/login');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('cinescope_token') : null;
+    
+    if (!token) {
+      push('Please log in to add favorites', 'error');
+      return router.push('/login');
+    }
+    
     setFavLoading(true);
+    setInFavorites(true);
     try {
-      const res = await fetch(`${apiUrl}/api/user/favorites`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ tmdbId: Number(id), media_type: 'tv', title: show.name, poster_path: show.poster_path, backdrop_path: show.backdrop_path }),
-      });
-      if (res.ok) setInFavorites(true);
-    } catch (e) {}
+      await addFavorite(token!, { tmdbId: Number(id), media_type: 'tv', title: show.name, poster_path: show.poster_path, backdrop_path: show.backdrop_path });
+      push('Added to favorites ✓', 'success');
+    } catch (e) {
+      setInFavorites(false);
+      push('Failed to add favorite', 'error');
+    }
     setFavLoading(false);
   }
 
   async function handleRemoveFavorite() {
-    if (!token) return router.push('/login');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('cinescope_token') : null;
+    if (!token) {
+      push('Please log in to manage favorites', 'error');
+      return router.push('/login');
+    }
     setFavLoading(true);
+    const prev = inFavorites;
+    setInFavorites(false);
     try {
-      const res = await fetch(`${apiUrl}/api/user/favorites/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) setInFavorites(false);
-    } catch (e) {}
+      await removeFavorite(token!, Number(id));
+      push('Removed from favorites', 'success');
+    } catch (e) {
+      setInFavorites(prev);
+      push('Failed to remove favorite', 'error');
+    }
     setFavLoading(false);
   }
 
   async function handleAddWatchlist() {
-    if (!token) return router.push('/login');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('cinescope_token') : null;
+    
+    if (!token) {
+      push('Please log in to add to watchlist', 'error');
+      return router.push('/login');
+    }
+    
     setFavLoading(true);
+    setInWatchlist(true);
     try {
-      const res = await fetch(`${apiUrl}/api/user/watchlist`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ tmdbId: Number(id), media_type: 'tv', title: show.name, poster_path: show.poster_path, backdrop_path: show.backdrop_path }),
-      });
-      if (res.ok) setInWatchlist(true);
-    } catch (e) {}
+      await addWatchlist(token!, { tmdbId: Number(id), media_type: 'tv', title: show.name, poster_path: show.poster_path, backdrop_path: show.backdrop_path });
+      push('Added to watchlist ✓', 'success');
+    } catch (e) {
+      setInWatchlist(false);
+      push('Failed to add watchlist', 'error');
+    }
     setFavLoading(false);
   }
 
   async function handleRemoveWatchlist() {
-    if (!token) return router.push('/login');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('cinescope_token') : null;
+    if (!token) {
+      push('Please log in to manage watchlist', 'error');
+      return router.push('/login');
+    }
     setFavLoading(true);
+    const prev = inWatchlist;
+    setInWatchlist(false);
     try {
-      const res = await fetch(`${apiUrl}/api/user/watchlist/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) setInWatchlist(false);
-    } catch (e) {}
+      await removeWatchlist(token!, Number(id));
+      push('Removed from watchlist', 'success');
+    } catch (e) {
+      setInWatchlist(prev);
+      push('Failed to remove watchlist', 'error');
+    }
     setFavLoading(false);
   }
 

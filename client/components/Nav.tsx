@@ -2,11 +2,13 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
 import GenresDropdown from './GenresDropdown';
 
 export default function Nav() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const [user, setUser] = useState<any>(null);
   const [scrolled, setScrolled] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -14,13 +16,32 @@ export default function Nav() {
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('cinescope_user');
-    if (storedUser) setUser(JSON.parse(storedUser));
+    // Check Google OAuth session first
+    if (session && session.user) {
+      const googleUser = {
+        name: session.user.name || 'Google User',
+        email: session.user.email,
+        image: session.user.image,
+        provider: 'google',
+      };
+      setUser(googleUser);
+      // Store in localStorage for consistency
+      localStorage.setItem('cinescope_user', JSON.stringify(googleUser));
+      
+      // Store backend token if available
+      if ((session.user as any).backendToken) {
+        localStorage.setItem('cinescope_token', (session.user as any).backendToken);
+      }
+    } else {
+      // Fallback to localStorage for email/password users
+      const storedUser = localStorage.getItem('cinescope_user');
+      if (storedUser) setUser(JSON.parse(storedUser));
+    }
 
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     // initialize search input from URL if present
@@ -33,10 +54,14 @@ export default function Nav() {
   }, [searchParams]);
 
   const handleLogout = () => {
-    localStorage.removeItem('cinescope_token');
-    localStorage.removeItem('cinescope_user');
-    setUser(null);
-    router.push('/login');
+    if (user?.provider === 'google') {
+      signOut({ callbackUrl: '/login' });
+    } else {
+      localStorage.removeItem('cinescope_token');
+      localStorage.removeItem('cinescope_user');
+      setUser(null);
+      router.push('/login');
+    }
   };
 
   // Close modal with ESC key
@@ -130,6 +155,15 @@ export default function Nav() {
                       <h3 className="text-white text-lg font-semibold">Your Profile</h3>
                     </div>
                     <div className="p-5 space-y-3">
+                      {user.image && (
+                        <div className="flex justify-center mb-3">
+                          <img 
+                            src={user.image} 
+                            alt="Profile" 
+                            className="w-16 h-16 rounded-full border-2 border-gray-700 object-cover" 
+                          />
+                        </div>
+                      )}
                       <div>
                         <p className="text-xs uppercase text-gray-500">Name</p>
                         <p className="text-white font-medium">{user.name || '—'}</p>
@@ -138,6 +172,12 @@ export default function Nav() {
                         <p className="text-xs uppercase text-gray-500">Email</p>
                         <p className="text-white font-medium break-all">{user.email}</p>
                       </div>
+                      {user.provider && (
+                        <div>
+                          <p className="text-xs uppercase text-gray-500">Login Method</p>
+                          <p className="text-white font-medium">{user.provider === 'google' ? 'Google' : 'Email/Password'}</p>
+                        </div>
+                      )}
                       <div className="pt-2 flex items-center gap-3">
                         <a
                           href="/profile"

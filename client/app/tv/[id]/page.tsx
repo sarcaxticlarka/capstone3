@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import SafeNav from '../../../components/SafeNav';
 import Footer from '../../../components/Footer';
 import { getApiUrl } from '../../../lib/api';
-import { addFavorite, removeFavorite, addWatchlist, removeWatchlist, favoriteExists } from '../../../lib/userLists';
+import { addFavorite, removeFavorite, addWatchlist, removeWatchlist, favoriteExists, updateFavorite } from '../../../lib/userLists';
 import { useToasts } from '../../../components/ToastProvider';
 
 export const dynamic = 'force-dynamic';
@@ -18,6 +18,9 @@ export default function TVPage() {
   const [favLoading, setFavLoading] = useState(false);
   const [inFavorites, setInFavorites] = useState(false);
   const [inWatchlist, setInWatchlist] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [personalRating, setPersonalRating] = useState(0);
+  const [personalNotes, setPersonalNotes] = useState('');
   const router = useRouter();
   const { push } = useToasts();
 
@@ -168,6 +171,38 @@ export default function TVPage() {
     setFavLoading(false);
   }
 
+  async function handleRateShow() {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('cinescope_token') : null;
+    if (!token) {
+      push('Please log in to rate shows', 'error');
+      return router.push('/login');
+    }
+
+    // First, ensure it's in favorites
+    if (!inFavorites) {
+      await handleAddFavorite();
+    }
+
+    // Open rating modal
+    setShowRatingModal(true);
+  }
+
+  async function handleSaveRating() {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('cinescope_token') : null;
+    if (!token) return;
+
+    try {
+      await updateFavorite(token, Number(id), {
+        personalRating,
+        notes: personalNotes.trim()
+      });
+      push('Rating saved! ⭐', 'success');
+      setShowRatingModal(false);
+    } catch (e: any) {
+      push('Failed to save rating: ' + (e.message || 'Unknown error'), 'error');
+    }
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       <SafeNav />
@@ -274,6 +309,16 @@ export default function TVPage() {
                     {favLoading ? 'Working...' : '+ Add to Watchlist'}
                   </button>
                 )}
+
+                <button 
+                  onClick={handleRateShow} 
+                  className="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white font-semibold rounded transition flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                  </svg>
+                  Rate This Show
+                </button>
               </div>
 
               {/* Seasons */}
@@ -340,6 +385,79 @@ export default function TVPage() {
           </div>
         </div>
       </div>
+
+      {/* Rating Modal */}
+      {showRatingModal && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/80 z-40"
+            onClick={() => setShowRatingModal(false)}
+          />
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-gray-900 rounded-xl p-6 w-full max-w-md border border-gray-700 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white text-xl font-bold">Rate "{show?.name}"</h3>
+              <button 
+                onClick={() => setShowRatingModal(false)}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            {/* Rating Slider */}
+            <div className="mb-4">
+              <label className="text-gray-400 text-sm mb-2 block">
+                Your Rating: <span className="text-yellow-500 font-bold text-lg">{personalRating}/10</span>
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="10"
+                step="0.5"
+                value={personalRating}
+                onChange={(e) => setPersonalRating(parseFloat(e.target.value))}
+                className="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>0</span>
+                <span>5</span>
+                <span>10</span>
+              </div>
+            </div>
+
+            {/* Notes Textarea */}
+            <div className="mb-4">
+              <label className="text-gray-400 text-sm mb-2 block">
+                Your Review <span className="text-gray-600">({personalNotes.length}/500)</span>
+              </label>
+              <textarea
+                value={personalNotes}
+                onChange={(e) => setPersonalNotes(e.target.value)}
+                placeholder="What did you think? Add your personal review or notes..."
+                maxLength={500}
+                rows={4}
+                className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg resize-none border border-gray-700 focus:border-yellow-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleSaveRating}
+                className="flex-1 px-4 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-semibold transition"
+              >
+                💾 Save Rating
+              </button>
+              <button
+                onClick={() => setShowRatingModal(false)}
+                className="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       <Footer />
     </div>
   );

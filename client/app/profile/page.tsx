@@ -6,7 +6,7 @@ import { useSession, signOut } from 'next-auth/react';
 import SafeNav from '../../components/SafeNav';
 import Footer from '../../components/Footer';
 import { getApiUrl } from '../../lib/api';
-import { fetchFavorites, fetchWatchlist, fetchWatchHistory, removeFavorite, removeWatchlist, removeWatchHistory } from '../../lib/userLists';
+import { fetchFavorites, fetchWatchlist, fetchWatchHistory, removeFavorite, removeWatchlist, removeWatchHistory, updateProfile, updateFavorite } from '../../lib/userLists';
 import { useToasts } from '../../components/ToastProvider';
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +19,11 @@ export default function ProfilePage() {
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [watchHistory, setWatchHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [editingFavorite, setEditingFavorite] = useState<number | null>(null);
+  const [favoriteRating, setFavoriteRating] = useState(0);
+  const [favoriteNotes, setFavoriteNotes] = useState('');
   const { push } = useToasts();
 
   useEffect(() => {
@@ -132,6 +137,53 @@ export default function ProfilePage() {
     router.push('/login');
   }
 
+  async function handleUpdateName() {
+    const token = localStorage.getItem('cinescope_token');
+    if (!token || !newName.trim()) {
+      push('Please enter a valid name', 'error');
+      return;
+    }
+    
+    try {
+      const updatedUser = await updateProfile(token, { name: newName.trim() });
+      setUser((prev: any) => ({ ...prev, name: updatedUser.name }));
+      
+      // Update localStorage
+      const storedUser = JSON.parse(localStorage.getItem('cinescope_user') || '{}');
+      storedUser.name = updatedUser.name;
+      localStorage.setItem('cinescope_user', JSON.stringify(storedUser));
+      
+      setEditingName(false);
+      push('Name updated successfully!', 'success');
+    } catch (e: any) {
+      push('Failed to update name: ' + (e.message || 'Unknown error'), 'error');
+    }
+  }
+
+  async function handleUpdateFavorite(tmdbId: number) {
+    const token = localStorage.getItem('cinescope_token');
+    if (!token) return;
+    
+    try {
+      const updatedFavorites = await updateFavorite(token, tmdbId, {
+        personalRating: favoriteRating,
+        notes: favoriteNotes.trim()
+      });
+      
+      setFavorites(updatedFavorites);
+      setEditingFavorite(null);
+      push('Rating & notes saved!', 'success');
+    } catch (e: any) {
+      push('Failed to update: ' + (e.message || 'Unknown error'), 'error');
+    }
+  }
+
+  function startEditingFavorite(item: any) {
+    setEditingFavorite(item.tmdbId);
+    setFavoriteRating(item.personalRating || 0);
+    setFavoriteNotes(item.notes || '');
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -161,7 +213,46 @@ export default function ProfilePage() {
             
             <div>
               <label className="text-xs uppercase text-gray-500 font-semibold">Name</label>
-              <p className="text-xl text-white mt-1">{user.name || 'Not provided'}</p>
+              {editingName ? (
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="flex-1 px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-blue-500 focus:outline-none"
+                    placeholder="Enter new name"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleUpdateName}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditingName(false)}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 mt-1">
+                  <p className="text-xl text-white">{user.name || 'Not provided'}</p>
+                  <button
+                    onClick={() => {
+                      setNewName(user.name || '');
+                      setEditingName(true);
+                    }}
+                    className="text-blue-500 hover:text-blue-400 text-sm font-medium flex items-center gap-1 transition"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                    </svg>
+                    Edit
+                  </button>
+                </div>
+              )}
             </div>
 
             <div>
@@ -264,26 +355,109 @@ export default function ProfilePage() {
                         className="w-full h-full object-cover"
                       />
                     </a>
+                    
+                    {/* Show rating if exists */}
+                    {item.personalRating > 0 && (
+                      <div className="absolute top-2 right-2 bg-yellow-500 text-black font-bold px-2 py-1 rounded text-xs">
+                        ⭐ {item.personalRating}
+                      </div>
+                    )}
+                    
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent opacity-0 group-hover:opacity-100 transition flex items-end">
                       <div className="p-2 w-full">
                         <p className="text-xs text-white truncate">{item.title}</p>
-                        <button
-                          onClick={() => removeFromFavorites(item.tmdbId)}
-                          className="mt-1 px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
-                        >
-                          Remove
-                        </button>
+                        {item.notes && (
+                          <p className="text-xs text-gray-300 truncate italic mt-1">"{item.notes}"</p>
+                        )}
+                        <div className="flex gap-1 mt-2">
+                          <button
+                            onClick={() => startEditingFavorite(item)}
+                            className="flex-1 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                          >
+                            ⭐ Rate
+                          </button>
+                          <button
+                            onClick={() => removeFromFavorites(item.tmdbId)}
+                            className="flex-1 px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-gray-400 bg-gray-900 rounded-lg p-8 text-center">
-                No favorites yet. Start adding movies and TV shows!
+              <div className="text-gray-500 bg-gray-900 rounded-lg p-8 text-center">
+                No favorites yet. Add movies and TV shows to your favorites!
               </div>
             )}
           </section>
+
+          {/* Rating Modal */}
+          {editingFavorite !== null && (
+            <>
+              <div 
+                className="fixed inset-0 bg-black/70 z-40"
+                onClick={() => setEditingFavorite(null)}
+              />
+              <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-gray-900 rounded-xl p-6 w-full max-w-md border border-gray-700">
+                <h3 className="text-white text-xl font-bold mb-4">Rate & Review</h3>
+                
+                {/* Rating Slider */}
+                <div className="mb-4">
+                  <label className="text-gray-400 text-sm mb-2 block">
+                    Your Rating: <span className="text-yellow-500 font-bold">{favoriteRating}/10</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="10"
+                    step="0.5"
+                    value={favoriteRating}
+                    onChange={(e) => setFavoriteRating(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>0</span>
+                    <span>5</span>
+                    <span>10</span>
+                  </div>
+                </div>
+
+                {/* Notes Textarea */}
+                <div className="mb-4">
+                  <label className="text-gray-400 text-sm mb-2 block">
+                    Your Notes <span className="text-gray-600">({favoriteNotes.length}/500)</span>
+                  </label>
+                  <textarea
+                    value={favoriteNotes}
+                    onChange={(e) => setFavoriteNotes(e.target.value)}
+                    placeholder="Add your personal notes, thoughts, or review..."
+                    maxLength={500}
+                    rows={4}
+                    className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg resize-none border border-gray-700 focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleUpdateFavorite(editingFavorite)}
+                    className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditingFavorite(null)}
+                    className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Watchlist Section */}
           <section>

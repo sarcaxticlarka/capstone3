@@ -335,23 +335,9 @@ vercel --prod
 - **Lighthouse Score**: 90+ (Performance)
 
 ---
+- **Frontend + Backend:** [Vercel](https://capstone3-lemon.vercel.app/)
 
-## 🐛 Troubleshooting
-
-**Port Already in Use**
-```bash
-lsof -ti:3000 | xargs kill -9  # Kill Next.js
-lsof -ti:5000 | xargs kill -9  # Kill Express
-```
-
-**MongoDB Connection Error**
-- Check `MONGO_URI` in `.env`
-- Verify network access (if using Atlas)
-
-**TMDB API Not Working**
-- Verify `TMDB_API_KEY` in `.env.local`
-- Restart Next.js dev server
-
+---- **Backend:** [Render](https://capstone3-6ywq.onrender.com)
 ---
 
 ## 👨‍💻 Author

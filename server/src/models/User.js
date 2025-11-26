@@ -15,6 +15,8 @@ const UserSchema = new mongoose.Schema(
         title: { type: String },
         poster_path: { type: String },
         backdrop_path: { type: String },
+        personalRating: { type: Number, min: 0, max: 10 },
+        notes: { type: String, maxlength: 500 },
       },
     ],
     watchlist: [

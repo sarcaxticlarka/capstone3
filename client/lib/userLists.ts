@@ -103,3 +103,46 @@ export async function removeWatchHistory(token: string, tmdbId: number) {
   if (!res.ok) throw new Error(`Remove watch-history failed: ${res.status}`);
   return (await res.json()).watchHistory || [];
 }
+
+// UPDATE OPERATIONS
+
+export interface UpdateProfilePayload {
+  name: string;
+}
+
+export interface UpdateFavoritePayload {
+  personalRating?: number;
+  notes?: string;
+}
+
+// Update user profile (name)
+export async function updateProfile(token: string, payload: UpdateProfilePayload) {
+  const api = getApiUrl();
+  const res = await fetch(`${api}/api/user/profile`, {
+    method: 'PUT',
+    headers: authHeaders(token, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(`Update profile failed: ${res.status} - ${errorData.message || 'Unknown'}`);
+  }
+  const data = await res.json();
+  return data.user;
+}
+
+// Update favorite item (rating/notes)
+export async function updateFavorite(token: string, tmdbId: number, payload: UpdateFavoritePayload) {
+  const api = getApiUrl();
+  const res = await fetch(`${api}/api/user/favorites/${tmdbId}`, {
+    method: 'PATCH',
+    headers: authHeaders(token, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(`Update favorite failed: ${res.status} - ${errorData.message || 'Unknown'}`);
+  }
+  const data = await res.json();
+  return data.favorites || [];
+}

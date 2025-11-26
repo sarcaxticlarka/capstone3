@@ -185,4 +185,81 @@ router.delete('/watch-history/:tmdbId', verifyToken, async (req, res) => {
   }
 });
 
+// UPDATE OPERATIONS
+
+// PUT /api/user/profile - Update user profile (name)
+router.put('/profile', verifyToken, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({ message: 'Name is required' });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.name = name.trim();
+    await user.save();
+
+    return res.json({ 
+      message: 'Profile updated successfully',
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        email: user.email,
+        image: user.image,
+        provider: user.provider
+      } 
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// PATCH /api/user/favorites/:tmdbId - Update favorite item (add rating/notes)
+router.patch('/favorites/:tmdbId', verifyToken, async (req, res) => {
+  try {
+    const tmdbId = parseInt(req.params.tmdbId, 10);
+    const { personalRating, notes } = req.body;
+
+    if (Number.isNaN(tmdbId)) {
+      return res.status(400).json({ message: 'Invalid tmdbId' });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const favoriteItem = user.favorites.find((f) => f.tmdbId === tmdbId);
+    if (!favoriteItem) {
+      return res.status(404).json({ message: 'Favorite item not found' });
+    }
+
+    // Update fields if provided
+    if (personalRating !== undefined) {
+      if (personalRating < 0 || personalRating > 10) {
+        return res.status(400).json({ message: 'Rating must be between 0 and 10' });
+      }
+      favoriteItem.personalRating = personalRating;
+    }
+
+    if (notes !== undefined) {
+      if (notes.length > 500) {
+        return res.status(400).json({ message: 'Notes cannot exceed 500 characters' });
+      }
+      favoriteItem.notes = notes;
+    }
+
+    await user.save();
+
+    return res.json({ 
+      message: 'Favorite updated successfully',
+      favorites: user.favorites 
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;
